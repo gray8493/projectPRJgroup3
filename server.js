@@ -223,6 +223,169 @@ app.get('/index.html', (req, res) => {
     res.redirect('/');
 });
 
+// Logout endpoint
+app.get('/logout', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Đăng xuất</title>
+            <meta charset="UTF-8">
+        </head>
+        <body>
+            <script>
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                window.location.href = '/';
+            </script>
+            <h1>Đang đăng xuất...</h1>
+            <p>Nếu không tự động chuyển hướng, <a href="/">nhấn vào đây</a></p>
+        </body>
+        </html>
+    `);
+});
+
+// ===== ORDER MANAGEMENT APIs =====
+
+// Create new order
+app.post('/api/orders', authenticateToken, async (req, res) => {
+    try {
+        const { order_type, table_number, items, total_amount } = req.body;
+        
+        if (!order_type || !items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Invalid order data' });
+        }
+        
+        // Create order
+        const [orderResult] = await pool.query(
+            'INSERT INTO orders (order_type, table_number, staff_username, total_amount) VALUES (?, ?, ?, ?)',
+            [order_type, table_number, req.user.username, total_amount]
+        );
+        
+        const orderId = orderResult.insertId;
+        
+        // Create order items
+        for (const item of items) {
+            await pool.query(
+                'INSERT INTO order_items (order_id, menu_item_id, quantity, price) VALUES (?, ?, ?, ?)',
+                [orderId, item.id, item.quantity, item.price]
+            );
+        }
+        
+        res.status(201).json({ 
+            success: true, 
+            order_id: orderId,
+            message: 'Order created successfully' 
+        });
+    } catch (err) {
+        console.error('Order creation error:', err);
+        res.status(500).json({ error: 'Failed to create order' });
+    }
+});
+
+// Get daily revenue statistics
+app.get('/api/statistics/daily', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        const { date } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        
+        // Get daily revenue
+        const [revenueResult] = await pool.query(
+            'SELECT SUM(total_amount) as total_revenue, COUNT(*) as total_orders FROM orders WHERE DATE(created_at) = ? AND status = "completed"',
+            [targetDate]
+        );
+        
+        // Get revenue by order type
+        const [typeRevenue] = await pool.query(
+            'SELECT order_type, SUM(total_amount) as revenue, COUNT(*) as count FROM orders WHERE DATE(created_at) = ? AND status = "completed" GROUP BY order_type',
+            [targetDate]
+        );
+        
+        // Get top selling items
+        const [topItems] = await pool.query(`
+            SELECT 
+                mi.name, 
+                mi.category,
+                SUM(oi.quantity) as total_quantity,
+                SUM(oi.quantity * oi.price) as total_revenue
+            FROM order_items oi
+            JOIN menu_items mi ON oi.menu_item_id = mi.id
+            JOIN orders o ON oi.order_id = o.id
+            WHERE DATE(o.created_at) = ? AND o.status = 'completed'
+            GROUP BY mi.id, mi.name, mi.category
+            ORDER BY total_quantity DESC
+            LIMIT 10
+        `, [targetDate]);
+        
+        // Get hourly sales
+        const [hourlySales] = await pool.query(`
+            SELECT 
+                HOUR(created_at) as hour,
+                COUNT(*) as orders,
+                SUM(total_amount) as revenue
+            FROM orders 
+            WHERE DATE(created_at) = ? AND status = 'completed'
+            GROUP BY HOUR(created_at)
+            ORDER BY hour
+        `, [targetDate]);
+        
+        res.json({
+            date: targetDate,
+            summary: {
+                total_revenue: revenueResult[0].total_revenue || 0,
+                total_orders: revenueResult[0].total_orders || 0,
+                average_order_value: revenueResult[0].total_orders > 0 
+                    ? (revenueResult[0].total_revenue / revenueResult[0].total_orders) 
+                    : 0
+            },
+            revenue_by_type: typeRevenue,
+            top_selling_items: topItems,
+            hourly_sales: hourlySales
+        });
+    } catch (err) {
+        console.error('Statistics error:', err);
+        res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+});
+
+// Get recent orders
+app.get('/api/orders/recent', authenticateToken, async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        
+        const [orders] = await pool.query(`
+            SELECT 
+                o.id,
+                o.order_type,
+                o.table_number,
+                o.staff_username,
+                o.total_amount,
+                o.status,
+                o.created_at,
+                GROUP_CONCAT(
+                    CONCAT(mi.name, ' x', oi.quantity) 
+                    ORDER BY mi.name SEPARATOR ', '
+                ) as items
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+            GROUP BY o.id
+            ORDER BY o.created_at DESC
+            LIMIT ?
+        `, [parseInt(limit)]);
+        
+        res.json(orders);
+    } catch (err) {
+        console.error('Recent orders error:', err);
+        res.status(500).json({ error: 'Failed to fetch recent orders' });
+    }
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);

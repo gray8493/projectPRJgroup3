@@ -12,9 +12,9 @@
         <h1><i class="fas fa-cog"></i> Quản lý Menu - Admin</h1>
         <div class="user-info">
             <span id="user-name">Admin</span>
-            <button class="logout-btn" onclick="logout()">
+            <a href="/logout" class="logout-btn" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; text-decoration: none;">
                 <i class="fas fa-sign-out-alt"></i> Đăng xuất
-            </button>
+            </a>
         </div>
     </div>
 
@@ -80,9 +80,16 @@
 
         // Logout function
         function logout() {
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
+            // Try to clear localStorage first
+            try {
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+            } catch (e) {
+                console.log('Could not clear localStorage:', e);
+            }
+            
+            // Redirect to logout endpoint
+            window.location.href = '/logout';
         }
 
         // Initialize the application
@@ -266,6 +273,8 @@
                     }
                     resetForm();
                     await renderMenuList(currentCategory);
+                    // Show success message
+                    alert('Món ăn đã được lưu thành công!');
                 } catch (err) {
                     alert('Lưu thất bại: ' + err);
                 }
@@ -274,6 +283,7 @@
             const resetBtn = document.getElementById('menu-reset-btn');
             if (resetBtn) resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetForm(); });
         }
+
 
         // Initialize app when page loads
         document.addEventListener('DOMContentLoaded', init);

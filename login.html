@@ -115,13 +115,32 @@
         // Check if already logged in
         window.addEventListener('load', () => {
             const user = localStorage.getItem('user');
-            if (user) {
-                const userData = JSON.parse(user);
-                if (userData.role === 'admin') {
-                    window.location.href = 'admin.html';
-                } else {
-                    window.location.href = 'order.html';
-                }
+            const token = localStorage.getItem('token');
+            
+            if (user && token) {
+                // Verify token is still valid
+                fetch(`${API_BASE}/statistics/daily`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        const userData = JSON.parse(user);
+                        if (userData.role === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'order.html';
+                        }
+                    } else {
+                        // Token invalid, clear storage
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                    }
+                }).catch(() => {
+                    // Error, clear storage
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                });
             }
         });
     </script>

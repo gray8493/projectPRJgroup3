@@ -12,9 +12,9 @@
         <h1><i class="fas fa-coffee"></i> Hệ thống đặt đồ uống</h1>
         <div class="user-info">
             <span id="user-name">Nhân viên</span>
-            <button class="logout-btn" onclick="logout()">
+            <a href="/logout" class="logout-btn" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; text-decoration: none;">
                 <i class="fas fa-sign-out-alt"></i> Đăng xuất
-            </button>
+            </a>
         </div>
     </div>
 
@@ -56,6 +56,13 @@
                     <button class="checkout-btn" onclick="checkout()">
                         <i class="fas fa-cash-register"></i> Thanh toán
                     </button>
+                </div>
+                
+                <!-- Logout button -->
+                <div style="margin-top: 20px; text-align: center;">
+                    <a href="/logout" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; display: block; text-decoration: none; text-align: center;">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
                 </div>
             </div>
         </div>
@@ -104,30 +111,50 @@
             const user = localStorage.getItem('user');
             const token = localStorage.getItem('token');
             
+            console.log('Current user:', user);
+            console.log('Token:', token ? 'Present' : 'Missing');
+            
             if (!user || !token) {
+                console.log('No user or token, redirecting to login');
                 window.location.href = 'login.html';
                 return;
             }
             
             currentUser = JSON.parse(user);
             document.getElementById('user-name').textContent = currentUser.name || currentUser.username;
+            console.log('Authentication successful');
         }
 
         // Logout function
         function logout() {
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            window.location.href = 'login.html';
+            // Try to clear localStorage first
+            try {
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+            } catch (e) {
+                console.log('Could not clear localStorage:', e);
+            }
+            
+            // Redirect to logout endpoint
+            window.location.href = '/logout';
         }
 
         // Initialize the application
         async function init() {
+            console.log('Initializing application...');
             checkAuth();
             updateTime();
             setInterval(updateTime, 1000);
             generateTables();
+            console.log('Loading products for coffee category...');
+            
+            // Check if products grid exists
+            const grid = document.getElementById('products-grid');
+            console.log('Products grid found:', !!grid);
+            
             await loadProducts('coffee');
             setupEventListeners();
+            console.log('Application initialized successfully');
         }
 
         // Update current time
@@ -206,15 +233,19 @@
         // Load products by category
         async function loadProducts(category) {
             const grid = document.getElementById('products-grid');
-            grid.innerHTML = '';
+            grid.innerHTML = '<div class="loading">Đang tải...</div>';
 
             try {
                 const token = localStorage.getItem('token');
+                console.log('Loading products for category:', category);
+                
                 const res = await fetch(`${API_BASE}/menu?category=${encodeURIComponent(category)}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
+                
+                console.log('API Response status:', res.status);
                 
                 if (!res.ok) {
                     if (res.status === 401) {
@@ -222,11 +253,19 @@
                         return;
                     }
                     console.error('API Error:', res.status, res.statusText);
+                    grid.innerHTML = '<p>Lỗi tải sản phẩm: ' + res.status + '</p>';
                     return;
                 }
                 
                 const items = await res.json();
+                console.log('Loaded items:', items);
                 
+                if (!items || items.length === 0) {
+                    grid.innerHTML = '<p>Không có sản phẩm nào trong danh mục này</p>';
+                    return;
+                }
+                
+                grid.innerHTML = '';
                 items.forEach(product => {
                     const productCard = document.createElement('div');
                     productCard.className = 'product-card';
@@ -236,14 +275,17 @@
                         <div class="product-image">
                             <i class="fas fa-coffee"></i>
                         </div>
-                        <div class="product-name">${product.name}</div>
-                        <div class="product-price">${formatPrice(Number(product.price))}</div>
+                        <div class="product-info">
+                            <h3>${product.name}</h3>
+                            <p class="product-price">${formatPrice(Number(product.price))}</p>
+                        </div>
                     `;
 
                     grid.appendChild(productCard);
                 });
             } catch (e) {
                 console.error('API Error:', e);
+                grid.innerHTML = '<p>Lỗi tải sản phẩm: ' + e.message + '</p>';
             }
         }
 
@@ -329,7 +371,7 @@
         }
 
         // Checkout function
-        function checkout() {
+        async function checkout() {
             if (cart.length === 0) {
                 alert('Vui lòng chọn ít nhất một món!');
                 return;
@@ -364,7 +406,38 @@
             document.getElementById('order-summary').innerHTML = orderSummary;
             document.getElementById('checkout-modal').style.display = 'block';
 
-            // Save order to localStorage (in real app, send to server)
+            // Save order to database
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        order_type: currentOrderType,
+                        table_number: selectedTable,
+                        items: cart.map(item => ({
+                            id: item.id,
+                            quantity: item.quantity,
+                            price: item.price
+                        })),
+                        total_amount: total
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Order saved successfully:', result);
+                } else {
+                    console.error('Failed to save order');
+                }
+            } catch (error) {
+                console.error('Error saving order:', error);
+            }
+
+            // Also save to localStorage as backup
             const order = {
                 id: Date.now(),
                 type: currentOrderType,
