@@ -1,6 +1,6 @@
 
-        // API configuration
-        const API_BASE = 'api';
+        // API configuration - Node.js Express server
+        const API_BASE = '/api';
 
         let cart = [];
         let currentOrderType = 'dine-in';
@@ -273,7 +273,7 @@
         // ---------- MENU MANAGEMENT (CRUD) ----------
         async function fetchMenu(category) {
             try {
-                const res = await fetch(`${API_BASE}/menu.php?category=${encodeURIComponent(category)}&_=${Date.now()}` , { 
+                const res = await fetch(`${API_BASE}/menu?category=${encodeURIComponent(category)}&_=${Date.now()}` , { 
                     cache: 'no-store', 
                     headers: { 'Cache-Control': 'no-cache' } 
                 });
@@ -333,7 +333,7 @@
         }
 
         async function createMenuItem(payload) {
-            const res = await fetch(`${API_BASE}/menu.php`, {
+            const res = await fetch(`${API_BASE}/menu`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -343,7 +343,7 @@
         }
 
         async function updateMenuItem(id, payload) {
-            const res = await fetch(`${API_BASE}/menu.php?id=${encodeURIComponent(id)}`, {
+            const res = await fetch(`${API_BASE}/menu/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -354,7 +354,7 @@
 
         async function deleteMenuItem(id) {
             if (!confirm('Xóa món này?')) return;
-            const res = await fetch(`${API_BASE}/menu.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE}/menu/${encodeURIComponent(id)}`, { method: 'DELETE' });
             if (!res.ok && res.status !== 204) { alert('Xóa thất bại: ' + (await res.text())); return; }
             await renderMenuList(currentCategory);
             await loadProducts(currentCategory);
