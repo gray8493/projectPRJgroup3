@@ -2,6 +2,8 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -10,14 +12,18 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+
+// Serve static files (except index.html)
+app.use(express.static(__dirname, {
+    index: false // Disable automatic index.html serving
+}));
 
 // Database connection
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD || 'anhthi060105',
     database: process.env.DB_NAME || 'cafe_pos',
     waitForConnections: true,
     connectionLimit: 10,
@@ -25,6 +31,55 @@ const dbConfig = {
 };
 
 const pool = mysql.createPool(dbConfig);
+
+// JWT Secret (in production, use environment variable)
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        // For demo purposes, use simple password check
+        // In production, use bcrypt to hash passwords
+        if (username === 'admin' && password === 'admin123') {
+            const user = { id: 1, username: 'admin', name: 'Quản trị viên', role: 'admin' };
+            const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+            return res.json({ user, token });
+        } else if (username === 'staff' && password === 'staff123') {
+            const user = { id: 2, username: 'staff', name: 'Nhân viên', role: 'staff' };
+            const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+            return res.json({ user, token });
+        } else {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -36,8 +91,8 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-// Get menu items
-app.get('/api/menu', async (req, res) => {
+// Get menu items (protected)
+app.get('/api/menu', authenticateToken, async (req, res) => {
     try {
         const { category } = req.query;
         let sql = 'SELECT id, name, price, category FROM menu_items';
@@ -57,9 +112,14 @@ app.get('/api/menu', async (req, res) => {
     }
 });
 
-// Create menu item
-app.post('/api/menu', async (req, res) => {
+// Create menu item (admin only)
+app.post('/api/menu', authenticateToken, async (req, res) => {
     try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
         const { name, price, category } = req.body;
         
         if (!name || price == null || !category) {
@@ -83,9 +143,14 @@ app.post('/api/menu', async (req, res) => {
     }
 });
 
-// Update menu item
-app.put('/api/menu/:id', async (req, res) => {
+// Update menu item (admin only)
+app.put('/api/menu/:id', authenticateToken, async (req, res) => {
     try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
         const { id } = req.params;
         const { name, price, category } = req.body;
         
@@ -125,9 +190,14 @@ app.put('/api/menu/:id', async (req, res) => {
     }
 });
 
-// Delete menu item
-app.delete('/api/menu/:id', async (req, res) => {
+// Delete menu item (admin only)
+app.delete('/api/menu/:id', authenticateToken, async (req, res) => {
     try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
         const { id } = req.params;
         
         const [result] = await pool.query('DELETE FROM menu_items WHERE id = ?', [id]);
@@ -145,7 +215,12 @@ app.delete('/api/menu/:id', async (req, res) => {
 
 // Serve static files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// Redirect old index.html to login
+app.get('/index.html', (req, res) => {
+    res.redirect('/');
 });
 
 // Start server

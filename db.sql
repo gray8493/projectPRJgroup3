@@ -2,6 +2,17 @@
 CREATE DATABASE IF NOT EXISTS cafe_pos;
 USE cafe_pos;
 
+-- Tạo bảng users
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    role ENUM('admin', 'staff') NOT NULL DEFAULT 'staff',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Tạo bảng menu_items
 CREATE TABLE IF NOT EXISTS menu_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -12,7 +23,12 @@ CREATE TABLE IF NOT EXISTS menu_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Thêm dữ liệu mẫu
+-- Thêm dữ liệu mẫu users
+INSERT INTO users (username, password, name, role) VALUES
+('admin', '$2b$10$rQZ8K9LmN2pO3qR4sT5uVe6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6', 'Quản trị viên', 'admin'),
+('staff', '$2b$10$rQZ8K9LmN2pO3qR4sT5uVe6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6', 'Nhân viên', 'staff');
+
+-- Thêm dữ liệu mẫu menu_items
 INSERT INTO menu_items (name, price, category) VALUES
 ('Cà phê đen', 15000, 'coffee'),
 ('Cà phê sữa', 18000, 'coffee'),
