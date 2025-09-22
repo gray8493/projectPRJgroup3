@@ -56,6 +56,7 @@ python -m pip install numpy==1.24.3
 python -m pip install streamlit==1.28.1
 python -m pip install Pillow==10.0.0
 python -m pip install matplotlib==3.7.2
+
 ```
 
 ### Phương pháp B: Cài đặt tất cả cùng lúc
