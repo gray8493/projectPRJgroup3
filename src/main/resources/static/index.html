@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Shop Admin</title>
+
+    <!-- External CSS -->
+  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Internal CSS -->
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            opacity: 0;
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Layout components */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* Header and Navigation */
+        .menu-btn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .menu-btn:hover, .logout-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #A0522D, #CD853F);
+        }
+
+        .logout-btn {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        h1 {
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+        #coffeeForm {
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 0 2rem 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            font-weight: 500;
+        }
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #8B4513;
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+        }
+        #coffeeList {
+            padding: 0 2rem 2rem;
+        }
+        .coffee-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .btn-edit, .btn-delete {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            color: white;
+        }
+        .btn-edit {
+            background-color: #8B4513;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+        }
+        button[type="submit"] {
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+
+    <!-- External JavaScript -->
+    <script src="js/admin.js" defer></script>
+
+    <!-- Internal JavaScript -->
+    <script>
+        // Page transition effects
+        document.addEventListener("DOMContentLoaded", async () => {
+            await checkAuthentication();
+            document.body.style.opacity = "1";
+        });
+
+        async function checkAuthentication() {
+            try {
+                const response = await fetch('/api/auth/user');
+                const result = await response.json();
+                
+                if (!result.authenticated || result.role !== 'ADMIN') {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // Update UI with user info if needed
+                console.log('Admin authenticated:', result.username);
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = 'login.html';
+            }
+        }
+
+        function goToMenu() {
+            document.body.style.opacity = "0";
+            setTimeout(() => {
+                window.location.href = "menu.html";
+            }, 300);
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <button class="menu-btn" onclick="goToMenu()">
+        <i class="fas fa-utensils"></i>
+        View Menu
+    </button>
+    <button class="logout-btn" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </button>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1>Coffee Shop Admin</h1>
+
+        <!-- Coffee Form -->
+        <form id="coffeeForm">
+            <div class="form-group">
+                <label for="coffeeName">Coffee Name</label>
+                <input type="text" id="coffeeName" required>
+            </div>
+            <div class="form-group">
+                <label for="coffeeDescription">Description</label>
+                <textarea id="coffeeDescription" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="coffeePrice">Price</label>
+                <input type="number" id="coffeePrice" required min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="coffeeCategory">Category</label>
+                <input type="text" id="coffeeCategory" required>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="coffeeAvailable" checked>
+                    Available
+                </label>
+            </div>
+            <input type="hidden" id="coffeeId">
+            <button type="submit">Add Coffee</button>
+        </form>
+
+        <!-- Coffee List -->
+        <div id="coffeeList">
+            <!-- Coffee items will be loaded here -->
+        </div>
+    </div>
+</body>
+</html>

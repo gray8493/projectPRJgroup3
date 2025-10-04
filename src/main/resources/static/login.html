@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Shop Login</title>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Internal CSS -->
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Login container */
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            transform: translateY(20px);
+            animation: slideUp 0.5s ease forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        /* Logo and title */
+        .logo {
+            font-size: 3rem;
+            color: #8B4513;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #8B4513;
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ced4da;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #8B4513;
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+            transition: color 0.3s ease;
+        }
+
+        .toggle-password:hover {
+            color: #8B4513;
+        }
+
+        button {
+            background: linear-gradient(45deg, #8B4513, #D2691E);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #A0522D, #CD853F);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.2);
+        }
+
+        /* Error message */
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            display: none;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success animation */
+        .success-checkmark {
+            display: none;
+            color: #28a745;
+            font-size: 3rem;
+            animation: scaleUp 0.5s ease;
+        }
+
+        @keyframes scaleUp {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">☕</div>
+        <h1>Coffee Shop Login</h1>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-field">
+                    <input type="password" id="password" required>
+                    <i class="toggle-password fas fa-eye" onclick="togglePassword()"></i>
+                </div>
+            </div>
+            <button type="submit">
+                <span class="button-text">Login</span>
+                <div class="spinner"></div>
+            </button>
+            <div class="error-message">Invalid username or password</div>
+            <div class="success-checkmark">
+                <i class="fas fa-check-circle"></i>
+            </div>
+        </form>
+    </div>
+
+    <!-- Internal JavaScript -->
+    <script>
+        // Show page with fade-in effect
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.style.opacity = '1';
+        });
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Handle login form submission
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const button = document.querySelector('button');
+            const buttonText = document.querySelector('.button-text');
+            const spinner = document.querySelector('.spinner');
+            const errorMessage = document.querySelector('.error-message');
+            const successCheckmark = document.querySelector('.success-checkmark');
+
+            // Show loading state
+            buttonText.style.display = 'none';
+            spinner.style.display = 'block';
+            errorMessage.style.display = 'none';
+            button.disabled = true;
+
+            try {
+                // Call authentication API
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show success animation
+                    spinner.style.display = 'none';
+                    successCheckmark.style.display = 'block';
+                    
+                    // Store user role in localStorage for frontend navigation
+                    localStorage.setItem('userRole', result.role.toLowerCase());
+                    localStorage.setItem('username', result.username);
+
+                    // Redirect based on role after success animation
+                    setTimeout(() => {
+                        document.body.style.opacity = '0';
+                        setTimeout(() => {
+                            if (result.role === 'ADMIN') {
+                                window.location.href = 'index.html';
+                            } else {
+                                window.location.href = 'menu.html';
+                            }
+                        }, 300);
+                    }, 1000);
+                } else {
+                    // Show error message
+                    spinner.style.display = 'none';
+                    buttonText.style.display = 'block';
+                    errorMessage.textContent = result.message || 'Login failed';
+                    errorMessage.style.display = 'block';
+                    button.disabled = false;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                spinner.style.display = 'none';
+                buttonText.style.display = 'block';
+                errorMessage.textContent = 'Network error. Please try again.';
+                errorMessage.style.display = 'block';
+                button.disabled = false;
+            }
+        }
+
+        // Clear any existing session and show login page
+        window.onload = function() {
+            // Clear localStorage to force fresh login
+            localStorage.removeItem('userRole');
+            document.body.style.opacity = '1';
+        };
+    </script>
+</body>
+</html>
