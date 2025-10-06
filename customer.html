@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Màn hình khách - POS Cafe</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">POS Cafe</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div class="badge">💳 Quét QR để thanh toán</div>
+        <button onclick="location.href='menu.html'" class="btn">← Quay lại menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="grid grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="topbar-title">Thông tin đơn</div>
+          <div id="orderMeta" class="note"></div>
+        </div>
+        <div class="panel-body">
+          <div id="orderList" class="cart-list"></div>
+          <div class="hr"></div>
+          <div class="cart-total"><span>Tổng thanh toán</span><strong id="orderTotal">0₫</strong></div>
+        </div>
+      </div>
+      <div class="panel elevated">
+        <div class="panel-header">
+          <div class="topbar-title">QR Thanh toán</div>
+          <div class="badge" id="brandText">POS Cafe</div>
+        </div>
+        <div class="panel-body" style="display:grid; place-items:center; gap:20px;">
+          <div class="qr-container">
+            <img id="qrImg" alt="QR Thanh toán" style="width:280px; height:280px; border-radius:20px; border:2px solid var(--color-primary); background:#0f1419;" />
+            <div class="qr-overlay">
+              <div class="qr-icon">📱</div>
+            </div>
+          </div>
+          <div class="payment-instructions">
+            <h4>Hướng dẫn thanh toán</h4>
+            <div class="instruction-steps">
+              <div class="step">1. Mở ứng dụng ngân hàng hoặc ví điện tử</div>
+              <div class="step">2. Chọn tính năng quét mã QR</div>
+              <div class="step">3. Quét mã QR ở trên</div>
+              <div class="step">4. Xác nhận thanh toán</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="topbar-title">Feedback khách hàng</div>
+      </div>
+      <div class="panel-body">
+        <div class="grid grid-3" id="feedbacks"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Check authentication
+  if(!sessionStorage.getItem('auth') || !sessionStorage.getItem('currentStore')){
+    window.location.href = 'store-selection.html';
+  }
+
+  // Load store info
+  const currentStore = sessionStorage.getItem('currentStore');
+  const stores = JSON.parse(localStorage.getItem('stores') || '{}');
+  const storeInfo = stores[currentStore];
+  
+  if(storeInfo) {
+    document.querySelector('.brand').textContent = storeInfo.name;
+  }
+  function createFeedbackCard(name, message){
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.padding = '16px';
+    div.innerHTML = `<div class="item-title" style="margin-bottom:6px;">${name}</div><div class="item-meta">“${message}”</div>`;
+    return div;
+  }
+
+  const payload = JSON.parse(sessionStorage.getItem('order')||'{}');
+  const list = document.getElementById('orderList');
+  const totalEl = document.getElementById('orderTotal');
+  const orderMeta = document.getElementById('orderMeta');
+  const qrImg = document.getElementById('qrImg');
+
+  const cart = payload.cart||[];
+  const total = payload.total||0;
+  const name = payload.name||'Khách lẻ';
+  const code = payload.code||'';
+  const tableNo = payload.tableNo||'';
+
+  orderMeta.textContent = `Khách: ${name}${code?` • Mã: ${code}`:''}${tableNo?` • Bàn ${tableNo}`:''}`;
+  let t = 0;
+  list.innerHTML = '';
+  cart.forEach(i=>{
+    const itemTotal = i.price * i.qty + (i.toppingPrice||0)*i.qty + (i.sizePrice||0)*i.qty;
+    t += itemTotal;
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `<div><div class="item-title">${i.name}</div><div class="item-meta">SL ${i.qty} × ${format(i.price)}${i.topping?` + ${i.topping}`:''}${i.size?` • ${i.size}`:''}${i.note?` • Note: ${i.note}`:''}</div></div><div style="text-align:right; font-weight:600;">${format(itemTotal)}</div>`;
+    list.appendChild(row);
+  });
+  totalEl.textContent = format(t);
+
+  const orderId = 'ORD' + Date.now();
+  const data = encodeURIComponent(JSON.stringify({orderId, name, code, tableNo, amount: t}));
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${data}`;
+  qrImg.src = url;
+
+  const fb = document.getElementById('feedbacks');
+  [
+    ['Minh Anh', 'Cà phê đậm vị, không gian đẹp!'],
+    ['Tuấn Kiệt', 'Trà sữa béo ngậy, topping tươi.'],
+    ['Thảo Vy', 'Phục vụ nhanh, giá hợp lý.']
+  ].forEach(([n,m])=> fb.appendChild(createFeedbackCard(n,m)));
+</script>
+</body>
+</html>

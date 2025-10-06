@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu - POS Cafe</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">POS Cafe</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <span class="badge">Bàn <input id="tableNo" class="input" style="width:90px; padding:6px 10px;" placeholder="Số bàn"></span>
+        <button onclick="location.href='login.html'" class="btn">Admin</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-layout">
+    <div class="panel">
+      <div class="panel-header">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span class="topbar-title">Danh mục</span>
+        </div>
+        <div class="category-tabs" id="tabs">
+          <button class="tab active" data-cat="ca-phe">☕ Cà phê</button>
+          <button class="tab" data-cat="tra-trai-cay">🍑 Trà trái cây</button>
+          <button class="tab" data-cat="tra-sua">🧋 Trà sữa</button>
+          <button class="tab" data-cat="do-an">🍰 Đồ ăn</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="items" class="grid grid-3"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="topbar-title">Giỏ hàng</div>
+        <div class="badge" id="customerInfo">Khách: <input id="customerName" class="input" style="width:160px; padding:6px 10px;" placeholder="Tên khách"> <input id="customerCode" class="input" style="width:120px; padding:6px 10px;" placeholder="Mã khách quen"></div>
+      </div>
+      <div class="panel-body">
+        <div class="cart">
+          <div class="cart-list" id="cartList"></div>
+          <div class="cart-total">
+            <span>Tổng</span>
+            <strong id="cartTotal">0₫</strong>
+          </div>
+          <div class="footer-actions">
+            <div class="grid grid-2" style="gap: 8px;">
+              <select id="topping" class="select" aria-label="Topping">
+                <option value="">Chọn topping (tuỳ chọn)</option>
+                <option value="tranchau">Trân châu +5.000</option>
+                <option value="thach">Thạch +5.000</option>
+                <option value="kem">Kem cheese +10.000</option>
+              </select>
+              <select id="size" class="select" aria-label="Size">
+                <option value="M">Size M (mặc định)</option>
+                <option value="S">Size S -5.000₫</option>
+                <option value="L">Size L +10.000₫</option>
+                <option value="XL">Size XL +20.000₫</option>
+              </select>
+            </div>
+            <textarea id="note" class="input" placeholder="Ghi chú đặc biệt (tuỳ chọn)" style="margin-top: 8px; min-height: 60px; resize: vertical;"></textarea>
+            <button id="btnPay" class="btn btn-primary" style="flex:1; margin-top: 8px;">Thanh toán</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+  // Load menu based on current store
+  function loadStoreMenu() {
+    const currentStore = sessionStorage.getItem('currentStore');
+    const storeMenus = JSON.parse(localStorage.getItem('storeMenus') || '{}');
+    
+    if(storeMenus[currentStore]) {
+      return storeMenus[currentStore];
+    }
+    
+    // Default menu for new stores
+    return {
+      'ca-phe': [
+        { id:'c1', name:'Cà phê đen', price:20000, img:'https://images.unsplash.com/photo-1507133750040-4a8f57021524?q=80&w=640&auto=format&fit=crop' },
+        { id:'c2', name:'Cà phê sữa', price:25000, img:'https://images.unsplash.com/photo-1485808191679-5f86510681a2?q=80&w=640&auto=format&fit=crop' },
+        { id:'c3', name:'Bạc xỉu', price:30000, img:'https://images.unsplash.com/photo-1523942839745-7848d4a1674e?q=80&w=640&auto=format&fit=crop' },
+        { id:'c4', name:'Cà phê latte', price:35000, img:'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=640&auto=format&fit=crop' },
+      ],
+      'tra-trai-cay': [
+        { id:'t1', name:'Trà đào', price:30000, img:'https://images.unsplash.com/photo-1544145945-f90425340c7e?q=80&w=640&auto=format&fit=crop' },
+        { id:'t2', name:'Trà vải', price:30000, img:'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=640&auto=format&fit=crop' },
+        { id:'t3', name:'Trà chanh', price:20000, img:'https://images.unsplash.com/photo-1497534446932-c925b458314e?q=80&w=640&auto=format&fit=crop' },
+        { id:'t4', name:'Trà cam', price:25000, img:'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?q=80&w=640&auto=format&fit=crop' },
+      ],
+      'tra-sua': [
+        { id:'s1', name:'Trà sữa truyền thống', price:30000, img:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=640&auto=format&fit=crop' },
+        { id:'s2', name:'Trà sữa matcha', price:35000, img:'https://images.unsplash.com/photo-1598514983703-84a9ee9a6b1d?q=80&w=640&auto=format&fit=crop' },
+        { id:'s3', name:'Trà sữa socola', price:35000, img:'https://images.unsplash.com/photo-1542996966-2e31c00bae30?q=80&w=640&auto=format&fit=crop' },
+        { id:'s4', name:'Trà sữa thái', price:32000, img:'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?q=80&w=640&auto=format&fit=crop' },
+      ],
+      'do-an': [
+        { id:'d1', name:'Bánh mì sandwich', price:25000, img:'https://images.unsplash.com/photo-1539252554453-80ab65ce3586?q=80&w=640&auto=format&fit=crop' },
+        { id:'d2', name:'Bánh ngọt', price:20000, img:'https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=640&auto=format&fit=crop' },
+        { id:'d3', name:'Bánh kem', price:35000, img:'https://images.unsplash.com/photo-1565958011703-44f9829ba187?q=80&w=640&auto=format&fit=crop' },
+        { id:'d4', name:'Bánh quy', price:15000, img:'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?q=80&w=640&auto=format&fit=crop' },
+      ]
+    };
+  }
+
+  const CATALOG = loadStoreMenu();
+
+  const TOPPING_PRICE = { tranchau:5000, thach:5000, kem:10000 };
+  const SIZE_PRICE = { S: -5000, M: 0, L: 10000, XL: 20000 };
+
+  const tabs = document.getElementById('tabs');
+  const items = document.getElementById('items');
+  const cartList = document.getElementById('cartList');
+  const cartTotal = document.getElementById('cartTotal');
+  const toppingSelect = document.getElementById('topping');
+
+  let cart = [];
+
+  function format(v){ return v.toLocaleString('vi-VN') + '₫'; }
+
+  function renderItems(cat){
+    items.innerHTML = '';
+    (CATALOG[cat]||[]).forEach(product => {
+      const el = document.createElement('div');
+      el.className = 'item-card';
+      el.innerHTML = `
+        <div><img class="item-thumb" src="${product.img}" alt="${product.name}"></div>
+        <div>
+          <div class="item-title">${product.name}</div>
+          <div class="item-meta">${format(product.price)}</div>
+        </div>
+        <div>
+          <button class="btn" data-add="${product.id}">Thêm</button>
+        </div>
+      `;
+      items.appendChild(el);
+    });
+  }
+
+
+  function renderCart(){
+    cartList.innerHTML = '';
+    let total = 0;
+    cart.forEach(item => {
+      const itemTotal = item.price * item.qty + (item.toppingPrice||0)*item.qty + (item.sizePrice||0)*item.qty;
+      total += itemTotal;
+      const row = document.createElement('div');
+      row.className = 'cart-row';
+      row.innerHTML = `
+        <div>
+          <div class="item-title">${item.name}</div>
+          <div class="item-meta">${format(item.price)}${item.topping ? ` + ${item.topping}` : ''}${item.size ? ` • ${item.size}` : ''}${item.note ? ` • Note: ${item.note}` : ''}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn" data-dec="${item.id}">-</button>
+          <span style="align-self:center;">${item.qty}</span>
+          <button class="btn" data-inc="${item.id}">+</button>
+        </div>
+        <div><button class="btn btn-danger" data-del="${item.id}">Xoá</button></div>
+      `;
+      cartList.appendChild(row);
+    });
+    cartTotal.textContent = format(total);
+  }
+
+  tabs.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('tab')){
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      e.target.classList.add('active');
+      renderItems(e.target.getAttribute('data-cat'));
+    }
+  });
+
+  items.addEventListener('click', (e)=>{
+    const add = e.target.getAttribute('data-add');
+    if(add){
+      const cat = document.querySelector('.tab.active').getAttribute('data-cat');
+      const p = (CATALOG[cat]||[]).find(i=>i.id===add);
+      if(!p) return;
+      
+      const tp = toppingSelect.value;
+      const size = document.getElementById('size').value;
+      const note = document.getElementById('note').value.trim();
+      
+      const toppingPrice = TOPPING_PRICE[tp]||0;
+      const sizePrice = SIZE_PRICE[size]||0;
+      
+      // Create unique key for cart item (id + topping + size + note)
+      const cartKey = `${p.id}_${tp}_${size}_${note}`;
+      const exist = cart.find(i=>i.cartKey===cartKey);
+      
+      if(exist){ 
+        exist.qty++; 
+      } else { 
+        cart.push({ 
+          id: p.id, 
+          name: p.name, 
+          price: p.price, 
+          qty: 1, 
+          topping: tp, 
+          toppingPrice,
+          size: size,
+          sizePrice,
+          note: note,
+          cartKey: cartKey
+        }); 
+      }
+      renderCart();
+    }
+  });
+
+
+  cartList.addEventListener('click', (e)=>{
+    const inc = e.target.getAttribute('data-inc');
+    const dec = e.target.getAttribute('data-dec');
+    const del = e.target.getAttribute('data-del');
+    if(inc){ const it = cart.find(i=>i.id===inc); if(it){ it.qty++; renderCart(); } }
+    if(dec){ const it = cart.find(i=>i.id===dec); if(it){ it.qty=Math.max(1,it.qty-1); renderCart(); } }
+    if(del){ cart = cart.filter(i=>i.id!==del); renderCart(); }
+  });
+
+  // Removed logout functionality - menu is now public for customers
+
+  document.getElementById('btnPay').addEventListener('click', ()=>{
+    const total = cart.reduce((s,i)=> s + i.price*i.qty + (i.toppingPrice||0)*i.qty + (i.sizePrice||0)*i.qty, 0);
+    const name = document.getElementById('customerName').value.trim();
+    const code = document.getElementById('customerCode').value.trim();
+    const tableNo = document.getElementById('tableNo').value.trim();
+    const payload = { cart, total, name, code, tableNo };
+    sessionStorage.setItem('order', JSON.stringify(payload));
+    window.location.href = 'customer.html';
+  });
+
+  // Check authentication
+  if(!sessionStorage.getItem('auth') || !sessionStorage.getItem('currentStore')){
+    window.location.href = 'store-selection.html';
+  }
+
+  // Load store info
+  const currentStore = sessionStorage.getItem('currentStore');
+  const stores = JSON.parse(localStorage.getItem('stores') || '{}');
+  const storeInfo = stores[currentStore];
+  
+  if(storeInfo) {
+    document.querySelector('.brand').textContent = storeInfo.name;
+  }
+  
+  renderItems('ca-phe');
+</script>
+</body>
+</html>

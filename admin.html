@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - POS Cafe</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">POS Cafe Admin</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button onclick="location.href='menu.html'" class="btn">Menu khách hàng</button>
+        <button onclick="location.href='store-selection.html'" class="btn">Chọn quán khác</button>
+        <button onclick="logout()" class="btn">Đăng xuất</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Tab Navigation -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="menu">Thêm món</button>
+      <button class="admin-tab" data-tab="revenue">Doanh thu</button>
+      <button class="admin-tab" data-tab="members">Hội viên</button>
+      <button class="admin-tab" data-tab="orders">Lịch sử đơn hàng</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Thêm món tab -->
+      <div id="menu-tab" class="tab-panel active">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="topbar-title">Chỉnh sửa menu</div>
+            <div class="category-tabs">
+              <button class="tab active" data-cat="ca-phe">Cà phê</button>
+              <button class="tab" data-cat="tra-trai-cay">Trà trái cây</button>
+              <button class="tab" data-cat="tra-sua">Trà sữa</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div id="menuEditor" class="grid"></div>
+            <div class="hr"></div>
+            <div class="grid grid-2">
+              <input id="newName" class="input" placeholder="Tên món">
+              <input id="newPrice" type="number" class="input" placeholder="Giá">
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px;">
+              <button id="btnAdd" class="btn btn-primary">Thêm món</button>
+              <div class="note">Chọn danh mục trước khi thêm.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doanh thu tab -->
+      <div id="revenue-tab" class="tab-panel">
+        <div class="panel">
+          <div class="panel-header"><div class="topbar-title">Thống kê doanh thu</div></div>
+          <div class="panel-body">
+            <table class="table">
+              <thead><tr><th>Ngày</th><th>Đơn</th><th>Doanh thu</th></tr></thead>
+              <tbody id="revenueBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hội viên tab -->
+      <div id="members-tab" class="tab-panel">
+        <div class="panel">
+          <div class="panel-header"><div class="topbar-title">Khách hàng hội viên</div></div>
+          <div class="panel-body">
+            <table class="table">
+              <thead><tr><th>Mã</th><th>Tên</th><th>Số đơn</th></tr></thead>
+              <tbody id="memberBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lịch sử đơn hàng tab -->
+      <div id="orders-tab" class="tab-panel">
+        <div class="panel">
+          <div class="panel-header"><div class="topbar-title">Lịch sử đơn hàng</div></div>
+          <div class="panel-body">
+            <table class="table">
+              <thead><tr><th>Thời gian</th><th>Bàn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead>
+              <tbody id="orderHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Check authentication and store - simplified
+  if(!sessionStorage.getItem('auth')){
+    // If no auth, try to set default admin
+    sessionStorage.setItem('auth', '1');
+    sessionStorage.setItem('userRole', 'admin');
+    sessionStorage.setItem('userName', 'Admin');
+    if(!sessionStorage.getItem('currentStore')){
+      sessionStorage.setItem('currentStore', 'store1');
+    }
+  }
+
+  const currentStore = sessionStorage.getItem('currentStore');
+  const stores = JSON.parse(localStorage.getItem('stores') || '{}');
+  const storeInfo = stores[currentStore];
+  
+  if(storeInfo) {
+    document.querySelector('.brand').textContent = storeInfo.name + ' - Admin';
+  }
+
+  const STORAGE_KEY = 'storeMenus';
+  const DEFAULT = {
+    'ca-phe': [ { id:'c1', name:'Cà phê đen', price:20000 }, { id:'c2', name:'Cà phê sữa', price:25000 } ],
+    'tra-trai-cay': [ { id:'t1', name:'Trà đào', price:30000 } ],
+    'tra-sua': [ { id:'s1', name:'Trà sữa truyền thống', price:30000 } ]
+  };
+
+  function loadCatalog(){
+    try{ 
+      const storeMenus = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      return storeMenus[currentStore] || DEFAULT;
+    }catch{ return DEFAULT; }
+  }
+  function saveCatalog(data){ 
+    const storeMenus = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    storeMenus[currentStore] = data;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storeMenus));
+  }
+
+  let catalog = loadCatalog();
+  let current = 'ca-phe';
+
+  const editor = document.getElementById('menuEditor');
+
+  function format(v){ return v.toLocaleString('vi-VN') + '₫'; }
+
+  function renderEditor(){
+    editor.innerHTML = '';
+    (catalog[current]||[]).forEach(item=>{
+      const row = document.createElement('div');
+      row.className = 'item-card';
+      row.innerHTML = `
+        <div><div class="item-thumb"></div></div>
+        <div>
+          <div class="item-title">${item.name}</div>
+          <div class="item-meta">${format(item.price)}</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" data-edit="${item.id}">Sửa</button>
+          <button class="btn btn-danger" data-del="${item.id}">Xoá</button>
+        </div>
+      `;
+      editor.appendChild(row);
+    });
+  }
+
+  document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', (e)=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    e.target.classList.add('active');
+    current = e.target.getAttribute('data-cat');
+    renderEditor();
+  }));
+
+  document.getElementById('btnAdd').addEventListener('click', ()=>{
+    const n = document.getElementById('newName').value.trim();
+    const p = parseInt(document.getElementById('newPrice').value,10)||0;
+    if(!n || p<=0) return;
+    const id = current + '-' + Date.now();
+    catalog[current] = catalog[current] || [];
+    catalog[current].push({ id, name:n, price:p });
+    saveCatalog(catalog);
+    renderEditor();
+    document.getElementById('newName').value='';
+    document.getElementById('newPrice').value='';
+  });
+
+  editor.addEventListener('click', (e)=>{
+    const did = e.target.getAttribute('data-del');
+    const eid = e.target.getAttribute('data-edit');
+    if(did){
+      catalog[current] = (catalog[current]||[]).filter(i=>i.id!==did);
+      saveCatalog(catalog);
+      renderEditor();
+    }
+    if(eid){
+      const it = (catalog[current]||[]).find(i=>i.id===eid);
+      if(!it) return;
+      const newName = prompt('Tên món', it.name) || it.name;
+      const newPrice = parseInt(prompt('Giá', it.price),10) || it.price;
+      it.name = newName; it.price = newPrice;
+      saveCatalog(catalog);
+      renderEditor();
+    }
+  });
+
+  function seedRevenue(){
+    const tbody = document.getElementById('revenueBody');
+    const days = 5;
+    const today = new Date();
+    for(let i=0;i<days;i++){
+      const d = new Date(today.getTime()-i*86400000);
+      const orders = 20 + Math.floor(Math.random()*15);
+      const rev = orders * (30000 + Math.floor(Math.random()*10000));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${d.toLocaleDateString('vi-VN')}</td><td>${orders}</td><td>${format(rev)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function seedMembers(){
+    const tbody = document.getElementById('memberBody');
+    [ ['MK001','Nguyễn An',12], ['MK002','Trần Bình',8], ['MK003','Lê Chi',15] ].forEach(([m,n,c])=>{ 
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${m}</td><td>${n}</td><td>${c}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function seedOrderHistory(){
+    const tbody = document.getElementById('orderHistoryBody');
+    const orders = [
+      { time: '14:30', table: 'Bàn 5', customer: 'Nguyễn An', total: 85000, status: 'Hoàn thành' },
+      { time: '14:15', table: 'Bàn 3', customer: 'Trần Bình', total: 120000, status: 'Hoàn thành' },
+      { time: '13:45', table: 'Bàn 1', customer: 'Lê Chi', total: 65000, status: 'Hoàn thành' },
+      { time: '13:20', table: 'Bàn 2', customer: 'Phạm Đức', total: 95000, status: 'Hoàn thành' },
+      { time: '12:55', table: 'Bàn 4', customer: 'Hoàng Minh', total: 75000, status: 'Hoàn thành' }
+    ];
+    
+    orders.forEach(order => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${order.time}</td>
+        <td>${order.table}</td>
+        <td>${order.customer}</td>
+        <td>${format(order.total)}</td>
+        <td><span class="badge badge-success">${order.status}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function initTabs(){
+    const adminTabs = document.querySelectorAll('.admin-tab');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    adminTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and panels
+        adminTabs.forEach(t => t.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding panel
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        const panel = document.getElementById(tabId + '-tab');
+        if(panel) {
+          panel.classList.add('active');
+        }
+      });
+    });
+  }
+
+  function logout(){
+    sessionStorage.removeItem('auth');
+    sessionStorage.removeItem('userRole');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('currentStore');
+    window.location.href = 'store-selection.html';
+  }
+
+  // Check admin authentication - simplified
+  if(!sessionStorage.getItem('auth')){
+    sessionStorage.setItem('auth', '1');
+    sessionStorage.setItem('userRole', 'admin');
+    sessionStorage.setItem('userName', 'Admin');
+    if(!sessionStorage.getItem('currentStore')){
+      sessionStorage.setItem('currentStore', 'store1');
+    }
+  }
+
+  // Initialize tabs and load data
+  initTabs();
+  renderEditor();
+  seedRevenue();
+  seedMembers();
+  seedOrderHistory();
+</script>
+</body>
+</html>

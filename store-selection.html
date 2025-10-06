@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chọn quán - POS Cafe</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="center-screen">
+    <div class="auth-box card">
+      <div class="panel-header">
+        <div class="brand">POS Cafe</div>
+        <span class="badge">Chọn quán của bạn</span>
+      </div>
+      <div class="panel-body">
+        <div class="grid">
+          <div>
+            <label class="note">Chọn quán</label>
+            <select id="storeSelect" class="select">
+              <option value="">-- Chọn quán --</option>
+              <option value="store1">Quán Cà Phê ABC - Quận 1</option>
+              <option value="store2">Quán Cà Phê XYZ - Quận 3</option>
+              <option value="store3">Quán Cà Phê DEF - Quận 7</option>
+            </select>
+          </div>
+          <div>
+            <label class="note">Tài khoản</label>
+            <input id="username" class="input" placeholder="Tên đăng nhập">
+          </div>
+          <div>
+            <label class="note">Mật khẩu</label>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input id="password" type="password" class="input" placeholder="••••••" style="flex:1;">
+              <button id="togglePwd" type="button" class="btn" aria-label="Hiện/ẩn mật khẩu">👁</button>
+            </div>
+          </div>
+          <button id="btnLogin" class="btn btn-primary">Đăng nhập</button>
+          <div class="hr"></div>
+          <div class="note" style="text-align: center;">
+            <a href="login.html" style="color: var(--color-primary); text-decoration: none;">Đăng ký tài khoản mới</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Password toggle
+  document.getElementById('togglePwd').addEventListener('click', function(){
+    const pwd = document.getElementById('password');
+    pwd.type = (pwd.type === 'password') ? 'text' : 'password';
+  });
+
+  // Login function
+  document.getElementById('btnLogin').addEventListener('click', function(){
+    const storeId = document.getElementById('storeSelect').value;
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if(!storeId || !username || !password) {
+      alert('Vui lòng chọn quán và nhập đầy đủ thông tin!');
+      return;
+    }
+
+    // Check if user exists in localStorage
+    const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const user = users.find(u => u.username === username && u.password === password);
+
+    if(username === 'admin' && password === '123456') {
+      // Default admin account
+      sessionStorage.setItem('auth', '1');
+      sessionStorage.setItem('userRole', 'admin');
+      sessionStorage.setItem('userName', 'Admin');
+      sessionStorage.setItem('currentStore', storeId);
+      // Redirect to admin page directly
+      window.location.href = 'admin.html';
+    } else if(user) {
+      // Registered user
+      sessionStorage.setItem('auth', '1');
+      sessionStorage.setItem('userRole', 'staff');
+      sessionStorage.setItem('userName', user.name);
+      sessionStorage.setItem('currentStore', storeId);
+      window.location.href = 'menu.html';
+    } else {
+      alert('Tài khoản hoặc mật khẩu không đúng!');
+    }
+  });
+
+  // Add direct admin access button
+  document.addEventListener('DOMContentLoaded', function() {
+    const loginButton = document.getElementById('btnLogin');
+    const directAdminBtn = document.createElement('button');
+    directAdminBtn.textContent = 'Truy cập Admin trực tiếp';
+    directAdminBtn.className = 'btn btn-primary';
+    directAdminBtn.style.marginTop = '10px';
+    directAdminBtn.style.width = '100%';
+    directAdminBtn.addEventListener('click', function() {
+      // Set default store and admin credentials
+      document.getElementById('storeSelect').value = 'store1';
+      document.getElementById('username').value = 'admin';
+      document.getElementById('password').value = '123456';
+      // Auto login
+      document.getElementById('btnLogin').click();
+    });
+    loginButton.parentNode.insertBefore(directAdminBtn, loginButton.nextSibling);
+  });
+
+  // Initialize store data if not exists
+  if(!localStorage.getItem('stores')) {
+    const stores = {
+      'store1': {
+        id: 'store1',
+        name: 'Quán Cà Phê ABC - Quận 1',
+        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
+        phone: '0123456789'
+      },
+      'store2': {
+        id: 'store2',
+        name: 'Quán Cà Phê XYZ - Quận 3',
+        address: '456 Lê Văn Sỹ, Quận 3, TP.HCM',
+        phone: '0987654321'
+      },
+      'store3': {
+        id: 'store3',
+        name: 'Quán Cà Phê DEF - Quận 7',
+        address: '789 Nguyễn Thị Thập, Quận 7, TP.HCM',
+        phone: '0369852147'
+      }
+    };
+    localStorage.setItem('stores', JSON.stringify(stores));
+  }
+</script>
+</body>
+</html>
